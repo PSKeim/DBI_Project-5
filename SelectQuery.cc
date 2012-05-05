@@ -281,10 +281,14 @@ void selectQuery (int output, string outputFile) {
 		
 		topNode = insert;
 		insert->outPipeID = pipeID++;
-		string base (iterTable->tableName);
-		string path ("bin/"+base+".bin");
 		
-		insert->path = strdup(path.c_str());
+		char binPath[100];
+		GetLoadPath(binPath, iterTable->tableName, dbfile_dir, "bin");
+		
+		//string base (iterTable->tableName);
+		//string path ("bin/"+base+".bin");
+		
+		insert->path = binPath;
 		
 		insert->SetType(SELECTF);
 		
@@ -333,11 +337,14 @@ void selectQuery (int output, string outputFile) {
 		//clog << "New node is inserted." << endl;
 		//Customizing select node:
 		insert->schema = traverse->schema; //Schemas are the same throughout selects, only rows change
-		insert->type = SELECTP;
+
 		//clog << "Schema is inserted." << endl;
 		insert->cnf = &selects[i]; //Need to implement CreateCNF in QueryTreeNode
 		insert->lChildPipeID = traverse->outPipeID;
+		insert->lInputPipe = traverse->outPipe;
 		insert->outPipeID = pipeID++;
+		
+		insert->SetType(SELECTP);
 		
 		//Because we made a selection, this may impact our decision on which tables to choose first for the join order
 		//So we should update the statistics object to reflect the change
@@ -596,18 +603,20 @@ void selectQuery (int output, string outputFile) {
 		//		clog << "Traversal finished" << endl;
 		//Create and customize our project node		
 		insert = new QueryTreeNode();
-		insert->type = PROJECT;
 		//	clog << "Customizing node" << endl;
+		
 		insert->left = traverse;
 		traverse->parent = insert;
 		insert->lChildPipeID = traverse->outPipeID;
+		insert->lInputPipe = traverse->outPipe;
 		insert->outPipeID = pipeID++;
-		//insert->projectAtts = attsToSelect;
 		
 		vector<int> indexOfAttsToKeep; //Keeps the indicies that we'll be keeping
 		Schema *oldSchema = traverse->schema;
 		NameList *attsTraverse = attsToSelect;
 		string attribute;
+		
+		insert->numAttsIn = traverse->schema->GetNumAtts();
 		
 		while(attsTraverse != 0){
 			//clog << "Atts traverse provided " << attsTraverse->name << endl;
@@ -621,23 +630,21 @@ void selectQuery (int output, string outputFile) {
 		//At the end of this, we've found the indicies of the attributes we want to keep from the old schema
 		Schema *newSchema = new Schema(oldSchema, indexOfAttsToKeep);
 		insert->schema = newSchema;
+		insert->numAttsOut = insert->schema->GetNumAtts();
 		clog << "Schema is inserted into insert, and is " << insert->schema << endl;
-		
 		insert->schema->Print();
+		
+		insert->SetType(PROJECT);
+
 	}
 	//	clog << "DONE WITH PROJECT NODE" << endl;
-	
-	clog << "PRINTING TREE IN ORDER: " << endl << endl;
-	if(insert != NULL) insert->PrintInOrder();
-	
-	
 
 	if(output == PIPE_NONE){
 		if(insert != NULL) topNode->PrintInOrder();
 	}
 	else if(output == PIPE_STDOUT){
-		cout << "EXECUTION FUNCTIONALITY IS BEING IMPLEMENTED. PLEASE EXCUSE MY FAIL." << endl;
-		//topNode->RunInOrder();
+		cout << "ATTEMPTING TO RUN TREE" << endl;
+		topNode->RunInOrder();
 	}
 	else if(output == PIPE_FILE){
 		cout << "EXECUTION FUNCTIONALITY IS BEING IMPLEMENTED. PLEASE EXCUSE MY FAIL." << endl;

@@ -58,13 +58,18 @@ class QueryTreeNode {
 	      QueryTreeNode();
 	 	~QueryTreeNode();
 
+	    //PRINT FUNCTIONs
 		void PrintInOrder();
 	      	void PrintNode ();
 	      	void PrintCNF();
 		void PrintFunction();
-
+	
+		//INITIALIZATION FUNCTION (...why?)
 		void SetType(QueryNodeType setter);
-
+	
+	
+		//RUN FUNCTIONs
+		void RunInOrder();
 		void Run();
 		void WaitUntilDone();
 
@@ -93,6 +98,7 @@ class QueryTreeNode {
 	      AndList *cnf;
 	      CNF *opCNF;
 	      Schema *schema;
+	      Record *literal;
 		// For GROUP BY
 	      OrderMaker *order;
 		// For aggregate

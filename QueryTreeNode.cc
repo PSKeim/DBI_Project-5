@@ -41,6 +41,7 @@ QueryTreeNode::QueryTreeNode(){
   order = NULL;
   funcOp = NULL;
   func = NULL;
+  literal = NULL;
 
 	sf = NULL;
 	sp = NULL;
@@ -70,7 +71,7 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 
 	type = setter;
 
-	/*outPipe = new Pipe(P_SIZE);
+	outPipe = new Pipe(P_SIZE);
 
 	switch (type){
 
@@ -81,11 +82,15 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 		db->Open((char*)(path.c_str()));
 
 		sf = new SelectFile();
-	      break;
+		
+		break;
 
 	    case SELECTP:
 
 		sp = new SelectPipe();
+
+		opCNF = new CNF();
+			opCNF->GrowFromParseTree(cnf, schema, *literal);
 
 	      break;
 
@@ -93,7 +98,12 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 
 		p = new Project();
 
-		attsToKeep = new int[aTK.size()]; //Need to set this to the, well, indicies of the attributes we're keeping
+		numAttsToKeep = (int) aTK.size();
+		attsToKeep = new int[numAttsToKeep]; //Need to set this to the, well, indicies of the attributes we're keeping
+
+		for (int i = 0; i < numAttsToKeep; i++){
+		  attsToKeep[i] = aTK[i];
+		}
 
 	      break;
 
@@ -133,7 +143,7 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 	    case WRITE:
 
 	      break;
-	  } // end switch*/
+	  } // end switch
 }
 
 /*
@@ -142,20 +152,31 @@ RUN FUNCTION
 
 */
 
+void QueryTreeNode::RunInOrder(){
+	if(NULL != left){
+		left->RunInOrder();
+	}
+	if(NULL != right){
+		right->RunInOrder();
+	}
+	Run();
+	WaitUntilDone();
+}
+
 void QueryTreeNode::Run(){
 
 	switch (type){
 
 		    case SELECTF:
-			//sf->Run(db, outPipe, cnf, NULL);
+			sf->Run(*db, *outPipe, *opCNF, *literal);
 		      break;
 
 		    case SELECTP:
-			//sp->Run(lInputPipe, outPipe, cnf, NULL);
+			sp->Run(*lInputPipe, *outPipe, *opCNF, *literal);
 		      break;
 
 		    case PROJECT:
-
+			p->Run(*lInputPipe, *outPipe, attsToKeep, numAttsIn, numAttsOut);
 		      break;
 
 		    case JOIN:
@@ -193,7 +214,7 @@ void QueryTreeNode::WaitUntilDone(){
 		      break;
 
 		    case PROJECT:
-
+			p->WaitUntilDone();
 		      break;
 
 		    case JOIN:
