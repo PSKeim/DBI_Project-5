@@ -41,7 +41,7 @@ QueryTreeNode::QueryTreeNode(){
   order = NULL;
   funcOp = NULL;
   func = NULL;
-  literal = NULL;
+  literal = new Record();
 
 	sf = NULL;
 	sp = NULL;
@@ -82,6 +82,7 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 		db->Open((char*)(path.c_str()));
 
 		sf = new SelectFile();
+		sf->Use_n_Pages(P_SIZE);
 		
 		break;
 
@@ -90,7 +91,8 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 		sp = new SelectPipe();
 
 		opCNF = new CNF();
-			opCNF->GrowFromParseTree(cnf, schema, *literal);
+		opCNF->GrowFromParseTree(cnf, schema, *literal);
+		sp->Use_n_Pages(P_SIZE);
 
 	      break;
 
@@ -105,14 +107,18 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 		  attsToKeep[i] = aTK[i];
 		}
 
+		p->Use_n_Pages(P_SIZE);
+
 	      break;
 
 	    case JOIN:
 
 	      j = new Join();
 
-	      lInputPipe = new Pipe(P_SIZE);
-	      rInputPipe = new Pipe(P_SIZE);
+		opCNF = new CNF();
+			opCNF->GrowFromParseTree(cnf, schema, *literal);
+
+		j->Use_n_Pages(P_SIZE);
 
 	      break;
 
@@ -120,7 +126,8 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 
 	      s = new Sum();
 
-	      lInputPipe = new Pipe(P_SIZE);
+
+		s->Use_n_Pages(P_SIZE);
 
 	      break;
 
@@ -128,7 +135,8 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 
 	      gb = new GroupBy();
 
-	      lInputPipe = new Pipe(P_SIZE);
+		gb->Use_n_Pages(P_SIZE);
+
 
 	      break;
 
@@ -136,7 +144,7 @@ void QueryTreeNode::SetType(QueryNodeType setter){
 
 	      d = new DuplicateRemoval();
 
-	      lInputPipe = new Pipe(P_SIZE);
+		d->Use_n_Pages(P_SIZE);
 
 	      break;
 
@@ -159,8 +167,10 @@ void QueryTreeNode::RunInOrder(){
 	if(NULL != right){
 		right->RunInOrder();
 	}
+	clog << GetTypeName() << " NODE IS NOW RUNNING " << endl;
 	Run();
-	WaitUntilDone();
+	//WaitUntilDone();
+	clog << GetTypeName() << " NODE IS NOW DONE OR SOMETHING " << endl;
 }
 
 void QueryTreeNode::Run(){
